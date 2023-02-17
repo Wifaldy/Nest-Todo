@@ -32,6 +32,15 @@
 $ npm install
 ```
 
+## Setup Config
+```bash
+#Setup database config
+Setup database config on file app.module.ts
+
+#Setup JWT_SECRET
+Setup JWT_SECRET on .env file
+```
+
 ## Running the app
 
 ```bash
@@ -71,3 +80,7 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](LICENSE).
+
+## Brief Report
+
+I have been working on this task for 4 days. The difficulties I faced were understanding the NestJS framework and also still confused about implementing JWT in NestJS.
