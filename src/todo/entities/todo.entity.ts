@@ -5,6 +5,9 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  DeleteDateColumn,
+  UpdateDateColumn,
+  CreateDateColumn,
 } from 'typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { TodoTag } from 'src/todo_tag/entities/todo_tag.entity';
@@ -37,17 +40,17 @@ export class Todo {
   })
   user_id: number;
 
-  @Column({
+  @CreateDateColumn({
     type: 'date',
   })
   created_at: Date;
 
-  @Column({
+  @UpdateDateColumn({
     type: 'date',
   })
   updated_at: Date;
 
-  @Column({
+  @DeleteDateColumn({
     type: 'date',
     default: null,
   })

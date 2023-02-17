@@ -8,6 +8,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { TodoService } from './todo.service';
 import { CreateTodoDto } from './dto/create-todo.dto';
@@ -27,8 +28,8 @@ export class TodoController {
   }
 
   @Get()
-  findAll(@GetUser() user: User) {
-    return this.todoService.findAll(user);
+  findAll(@GetUser() user: User, @Query('tag') tag: string, @Query('completed') completed: boolean) {
+    return this.todoService.findAll(user, tag, completed);
   }
 
   @Get(':id')
@@ -42,7 +43,7 @@ export class TodoController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.todoService.remove(+id);
+  remove(@Param('id') id: string, @GetUser() user: User) {
+    return this.todoService.remove(+id, user);
   }
 }

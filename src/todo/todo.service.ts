@@ -20,6 +20,7 @@ export class TodoService {
     private readonly tagRepository: Repository<Tag>,
     private dataSource: DataSource
   ) { }
+
   async create(createTodoDto: CreateTodoDto, user: User) {
     const queryRunner = this.dataSource.createQueryRunner();
     try {
@@ -34,36 +35,7 @@ export class TodoService {
       todo.updated_at = new Date()
       const createdTodo = await this.todoRepository.save(todo);
 
-      createTodoDto.tag_name.forEach(async (tag_name) => {
-        const findTag = await this.tagRepository.findOne({
-          where: { name: tag_name },
-        });
-        if (findTag) {
-          const todoTag = new TodoTag();
-          todoTag.todo_id = createdTodo.id
-          todoTag.tag_id = findTag.id
-          todoTag.created_at = new Date()
-          todoTag.updated_at = new Date()
-
-          await this.todoTagRepository.save(todoTag);
-        }
-        else {
-          const tag = new Tag();
-          tag.name = tag_name
-          tag.created_at = new Date()
-          tag.updated_at = new Date()
-          const createdTag = await this.tagRepository.save(tag);
-
-          const todoTag = new TodoTag();
-          todoTag.todo_id = createdTodo.id
-          todoTag.tag_id = createdTag.id
-          todoTag.created_at = new Date()
-          todoTag.updated_at = new Date()
-
-          await this.todoTagRepository.save(todoTag);
-        }
-      }
-      );
+      await this.creatingTagAndTodoTag(createTodoDto.tag_name, createdTodo)
       await queryRunner.commitTransaction();
       return {
         message: 'Todo created successfully',
@@ -76,25 +48,27 @@ export class TodoService {
     }
   }
 
-  async findAll(user: User) {
+  async findAll(user: User, tag: string, completed) {
+
     const todos = await this.todoRepository.find({
-      where: { user_id: user.id },
       relations: {
         todo_tag: {
           tag: true,
         },
       },
+      where: {
+        user_id: user.id,
+        todo_tag: {
+          tag: {
+            name: tag
+          }
+        },
+        completed
+      },
     })
-    const extractedTodos = []
-    todos.map((todo) => {
-      const newTodo = { ...todo, tags_name: [] }
 
-      newTodo.tags_name = todo.todo_tag.map(todo_tag => todo_tag.tag.name)
-      delete newTodo.todo_tag
-      extractedTodos.push(newTodo)
-    })
     return {
-      extractedTodos
+      todos
     }
   }
 
@@ -102,7 +76,6 @@ export class TodoService {
     const todo = await this.todoRepository.findOne({
       where: {
         id: id,
-        user_id: user.id
       }
     })
     if (!todo) {
@@ -117,76 +90,113 @@ export class TodoService {
   }
 
   async update(id: number, updateTodoDto: UpdateTodoDto, user: User) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    try {
+      await queryRunner.startTransaction();
+      const todo = await this.todoRepository.findOne({
+        where: {
+          id: id,
+          user_id: user.id
+        }
+      })
+      if (!todo) {
+        throw new HttpException('Todo not found', 404)
+      }
+      if (todo.user_id !== user.id) {
+        throw new HttpException('Unauthorized', 401)
+      }
+
+      todo.title = updateTodoDto.title || todo.title
+      todo.description = updateTodoDto.description || todo.description
+      todo.completed = updateTodoDto.completed || todo.completed
+      todo.due_time = updateTodoDto.due_time || todo.due_time
+      todo.updated_at = new Date()
+
+      await this.todoRepository.save(todo);
+
+      if (updateTodoDto.tag_name.length > 0) {
+        const todoTag = await this.todoTagRepository.find({
+          where: {
+            todo_id: id,
+          }
+        })
+        if (todoTag) {
+          todoTag.map(async (todoTag) => {
+            await this.todoTagRepository.softDelete(todoTag.id)
+          })
+        }
+        await this.creatingTagAndTodoTag(updateTodoDto.tag_name, todo)
+      }
+      await queryRunner.commitTransaction();
+      return await this.findOne(id, user)
+    } catch (e) {
+      queryRunner.rollbackTransaction();
+      console.log(e)
+    } finally {
+      await queryRunner.release()
+    }
+  }
+
+  async creatingTagAndTodoTag(tags_name: string[], createdTodo: Todo) {
+    tags_name.forEach(async (tag_name) => {
+      const findTag = await this.tagRepository.findOne({
+        where: { name: tag_name.toLowerCase() },
+      });
+      if (findTag) {
+        const todoTag = new TodoTag();
+        todoTag.todo_id = createdTodo.id
+        todoTag.tag_id = findTag.id
+        todoTag.created_at = new Date()
+        todoTag.updated_at = new Date()
+
+        await this.todoTagRepository.save(todoTag);
+      }
+      else {
+        const tag = new Tag();
+        tag.name = tag_name.toLowerCase()
+        tag.created_at = new Date()
+        tag.updated_at = new Date()
+        const createdTag = await this.tagRepository.save(tag);
+
+        const todoTag = new TodoTag();
+        todoTag.todo_id = createdTodo.id
+        todoTag.tag_id = createdTag.id
+        todoTag.created_at = new Date()
+        todoTag.updated_at = new Date()
+
+        await this.todoTagRepository.save(todoTag);
+      }
+    }
+    );
+  }
+
+  async remove(id: number, user: User) {
     const todo = await this.todoRepository.findOne({
       where: {
         id: id,
-        user_id: user.id
       }
     })
+    const todoTag = await this.todoTagRepository.find({
+      where: {
+        todo_id: id,
+      }
+    })
+    if (todoTag) {
+      todoTag.map(async (todoTag) => {
+        await this.todoTagRepository.softDelete(todoTag.id)
+      })
+    }
+
     if (!todo) {
       throw new HttpException('Todo not found', 404)
     }
     if (todo.user_id !== user.id) {
       throw new HttpException('Unauthorized', 401)
     }
-
-    todo.title = updateTodoDto.title || todo.title
-    todo.description = updateTodoDto.description || todo.description
-    todo.completed = updateTodoDto.completed || todo.completed
-    todo.due_time = updateTodoDto.due_time || todo.due_time
-    todo.updated_at = new Date()
-
-    await this.todoRepository.save(todo);
-
-    const todoTags = await this.todoTagRepository.find({
-      where: {
-        todo_id: id
-      },
-      relations: {
-        tag: true
-      }
-    })
+    await this.todoRepository.softDelete(id)
 
     return {
-      todoTags
+      message: 'Todo deleted successfully'
     }
-    // todoTags.map(async (todoTag) => {
-    //   await this.todoTagRepository.delete(todoTag.id)
-    // }
-    // )
-
-    // updateTodoDto.tag_name.forEach(async (tag_name) => {
-    //   const findTag = await this.tagRepository.findOne({
-    //     where: { name: tag_name },
-    //   });
-    //   if (findTag) {
-    //     const todoTag = new TodoTag();
-    //     todoTag.todo_id = todo.id
-    //     todoTag.tag_id = findTag.id
-    //     todoTag.created_at = new Date()
-    //     todoTag.updated_at = new Date()
-
-    //     await this.todoTagRepository.save(todoTag);
-    //   }
-    //   else {
-    //     const tag = new Tag();
-    //     tag.name = tag_name
-    //     tag.created_at = new Date()
-    //     tag.updated_at = new Date()
-    //     const createdTag = await this.tagRepository.save(tag);
-
-    //     const todoTag = new TodoTag();
-    //     todoTag.todo_id = todo.id
-    //     todoTag.tag_id = createdTag.id
-    //     todoTag.created_at = new Date()
-    //     todoTag.updated_at = new Date()
-
-    //     await this.todoTagRepository.save(todoTag);
-    //   }
-    // })
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} todo`;
   }
 }

@@ -6,6 +6,9 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 
 @Entity()
@@ -25,17 +28,17 @@ export class TodoTag {
   })
   tag_id: string;
 
-  @Column({
+  @CreateDateColumn({
     type: 'date',
   })
   created_at: Date;
 
-  @Column({
+  @UpdateDateColumn({
     type: 'date',
   })
   updated_at: Date;
 
-  @Column({
+  @DeleteDateColumn({
     type: 'date',
     default: null,
   })

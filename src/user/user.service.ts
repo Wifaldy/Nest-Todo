@@ -23,9 +23,16 @@ export class UserService {
     if (!user) {
       throw new HttpException('User not found', 404)
     }
-    user.email = updateUserDto.email || user.email;
-    user.name = updateUserDto.name || user.name;
-    user.password = await argon.hash(updateUserDto.password) || user.password;
+
+    if (updateUserDto.email) {
+      user.email = updateUserDto.email
+    }
+    if (updateUserDto.name) {
+      user.name = updateUserDto.name
+    }
+    if (updateUserDto.password) {
+      user.password = await argon.hash(updateUserDto.password)
+    }
     user.updated_at = new Date();
 
     await this.userRepository.save(user);

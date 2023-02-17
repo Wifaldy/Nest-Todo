@@ -61,7 +61,7 @@ export class AuthService {
     const payload = { userId, email };
     const secret = this.configService.get('JWT_SECRET')
     const token = this.jwtService.sign(payload, {
-      expiresIn: '15m',
+      expiresIn: '1d',
       secret
     })
     return {

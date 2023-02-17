@@ -1,5 +1,13 @@
 import { TodoTag } from 'src/todo_tag/entities/todo_tag.entity';
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  DeleteDateColumn,
+  UpdateDateColumn,
+  CreateDateColumn,
+} from 'typeorm';
 
 @Entity()
 export class Tag {
@@ -14,17 +22,17 @@ export class Tag {
   })
   name: string;
 
-  @Column({
+  @CreateDateColumn({
     type: 'date',
   })
   created_at: Date;
 
-  @Column({
+  @UpdateDateColumn({
     type: 'date',
   })
   updated_at: Date;
 
-  @Column({
+  @DeleteDateColumn({
     type: 'date',
     default: null,
   })

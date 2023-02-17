@@ -1,5 +1,13 @@
 import { Todo } from 'src/todo/entities/todo.entity';
-import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  DeleteDateColumn,
+  UpdateDateColumn,
+  CreateDateColumn,
+} from 'typeorm';
 
 @Entity()
 export class User {
@@ -27,17 +35,17 @@ export class User {
   })
   password: string;
 
-  @Column({
+  @CreateDateColumn({
     type: 'date',
   })
   created_at: Date;
 
-  @Column({
+  @UpdateDateColumn({
     type: 'date',
   })
   updated_at: Date;
 
-  @Column({
+  @DeleteDateColumn({
     type: 'date',
     default: null,
   })
